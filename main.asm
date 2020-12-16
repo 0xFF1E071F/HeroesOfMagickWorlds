@@ -16,6 +16,7 @@ includelib SDL2_image.lib
 includelib SDL2_ttf.lib
 
 include main.inc
+include utils.inc
 include SDL.inc
 include SDL_image.inc
 include SDL_ttf.inc
@@ -33,6 +34,8 @@ Window struct
 Window ends
 
 include texture.asm
+include sprite.asm
+include player.asm
 
 InitGame proto
 HaltGame proto
@@ -48,17 +51,19 @@ HaltSDL2 proto
 gGameCtx	GameCTX<>
 gWindow 	Window<>
 
-gTexture 	Texture<>
+gPlayer Player <>
 
 .code
 main proc 
-	LOCAL clip:SDL_Rect
+	;LOCAL clip:SDL_Rect
 	LOCAL x:DWORD
 	LOCAL y:DWORD
 	
 	mov x, 0
 	mov y, 0
 	invoke InitGame
+	
+	invoke Player_ctor, addr gPlayer
 	
 	mov gGameCtx.m_quit, 0
 	.while gGameCtx.m_quit != 1
@@ -69,22 +74,11 @@ main proc
 				mov gGameCtx.m_quit, 1
 			.endif
 			
+			invoke Player_handleInput, addr gPlayer, addr gGameCtx.m_eventHandler
+			
 			invoke SDL_PollEvent, addr gGameCtx.m_eventHandler
 		.endw
 		
-		invoke SDL_GetKeyboardState, 0
-		.if BYTE PTR [rax + SDL_SCANCODE_UP]
-			sub y, 10
-		.endif
-		.if  BYTE PTR [rax + SDL_SCANCODE_DOWN]
-			add y, 10
-		.endif
-		.if  BYTE PTR [rax + SDL_SCANCODE_LEFT]
-			sub x, 10
-		.endif
-		.if  BYTE PTR [rax + SDL_SCANCODE_RIGHT]
-			add x, 10
-		.endif
 		; Update game based on dt
 		
 		; Render the game
@@ -92,14 +86,16 @@ main proc
 		invoke SDL_RenderClear, gGameCtx.m_pRenderer
 		
 		; Draw texture
-		mov clip.w, 160
-		mov clip.h, 160
-		invoke Texture_render, addr gTexture, x, y, addr clip, 0, 0, 0  
+		;mov clip.w, 160
+		;mov clip.h, 160
+		;invoke Texture_render, addr gTexture, x, y, addr clip, 0, 0, 0  
 		
 		; Finally, render the GUI
 		
 		invoke SDL_RenderPresent, gGameCtx.m_pRenderer
 	.endw
+	
+	invoke Player_dtor, addr gPlayer
 	
 	invoke HaltGame
 	
@@ -112,8 +108,8 @@ InitGame proc
 	invoke InitSDL2
 	
 	; Load resources 
-	invoke Texture_ctor, addr gTexture
-	invoke Texture_loadTextureFile, addr gTexture, "Resources\\Textures\\Characters\\Necromancer_Male\\Necromancer_Base\\Sprite_1.png"
+	;invoke Texture_ctor, addr gTexture
+	;invoke Texture_loadTextureFile, addr gTexture, "Resources\\Textures\\Characters\\Necromancer_Male\\Necromancer_Base\\Sprite_1.png"
 	
 	ret
 InitGame endp
@@ -121,7 +117,7 @@ InitGame endp
 HaltGame proc
 	
 	; Destroy resources
-	invoke Texture_dtor, addr gTexture
+	;invoke Texture_dtor, addr gTexture
 	
 	invoke HaltSDL2
 	
